@@ -14,9 +14,11 @@
     GEN(E_URI_TOO_LONG) \
     GEN(E_URI_EMPTY_STRING) \
     GEN(E_URI_IS_STATIC) \
-    GEN(E_URI_ESCAPES_ROOT) \
-    GEN(E_URI_RESOURCE_DNE) \
-    GEN(E_URI_RESOURCE_READ_ACCESS_DENIED) \
+    GEN(E_URI_ESCAPE_SEQUENCE_FOUND) \
+    GEN(E_FILE_DNE) \
+    GEN(E_FILE_READ_ACCESS_DENIED) \
+    GEN(E_FILE_IS_NON_REGULAR) \
+    GEN(E_FILE_IS_EMPTY) \
 
 // Basically assert. Unlike assert, this macro does not
 // get excluded when DEBUG is set. Use to define scenarios 

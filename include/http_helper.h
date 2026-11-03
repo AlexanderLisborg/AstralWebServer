@@ -26,7 +26,7 @@ void handle_http_GET(int fd, char* uri);
 // duplication may be relevant. What if file is read into
 // fd directly instead of mapped to memory then written to
 // fd. Is this possible? 
-void serve_resource(int fd, char* uri);
+int serve_resource(int fd, char* uri);
 
 // If something goes wrong when serving content,
 // respond with an error page which describes the
