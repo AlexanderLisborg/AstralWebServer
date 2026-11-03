@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.2.0)
+cmake_minimum_required(VERSION 3.31.6)
 project(
     AstralWebServer
     VERSION 1.0
@@ -9,20 +9,21 @@ project(
 #set_property(TARGET PROPERTY C_STANDARD)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(server)
+add_executable(tester)
 
-target_sources(server
+target_sources(tester
     PRIVATE
-        src/io_helper.c
-        src/http_helper.c
-        src/wserver.c
+        #src/io_helper.c
+        #src/http_helper.c
+        src/tester.c
     PRIVATE
         FILE_SET HEADERS
         BASE_DIRS include
         FILES
-            include/job_queue.h
-            include/io_helper.h
-            include/http_helper.h
+            include/astral_error.h
+            #include/job_queue.h
+            #include/io_helper.h
+            #include/http_helper.h
 )
 
 

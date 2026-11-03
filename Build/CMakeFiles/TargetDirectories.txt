@@ -1,0 +1,3 @@
+/home/alex/git/AstralWebServer/Build/CMakeFiles/tester.dir
+/home/alex/git/AstralWebServer/Build/CMakeFiles/edit_cache.dir
+/home/alex/git/AstralWebServer/Build/CMakeFiles/rebuild_cache.dir

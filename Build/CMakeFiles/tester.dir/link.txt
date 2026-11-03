@@ -1,0 +1,1 @@
+/usr/bin/cc -Wl,--dependency-file=CMakeFiles/tester.dir/link.d CMakeFiles/tester.dir/src/tester.c.o -o tester
