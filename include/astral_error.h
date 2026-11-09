@@ -2,6 +2,7 @@
 #define __astral_error__
 
 #include <stdlib.h>
+#include <stdio.h>
 
 // Helper macro, define enum entry
 #define _GEN_ENUM(ENUM) ENUM,
@@ -19,13 +20,8 @@
     GEN(E_FILE_READ_ACCESS_DENIED) \
     GEN(E_FILE_IS_NON_REGULAR) \
     GEN(E_FILE_IS_EMPTY) \
-
-// Basically assert. Unlike assert, this macro does not
-// get excluded when DEBUG is set. Use to define scenarios 
-// where the program should crash. Unexpected behavior 
-// should crash the server. This may be extended to also log.
-#define enforce(expression,description)  \
-    ({if(expression);else{fprintf(stderr,"%s:%u: fatal error '%s' exiting...\n", __FILE__, __LINE__, (description)); exit(1);}})
+    GEN(E_FILE_TOO_LARGE) \
+    GEN(E_FILE_READ_FAILED) \
 
 // All errors should be handled without crashing. (non-fatal)
 // For fatal errors, use enforce.
@@ -34,9 +30,12 @@ typedef enum _astral_error {
     NUMBER_OF_ASTRAL_ERRORS
 } astral_error_t;
 
-// C-string representations of macro names.
-const char* error_str[] = {
-    _FOREACH_ERROR(_GEN_STRING)
-};
+// Basically assert. Unlike assert, this macro does not
+// get excluded when DEBUG is unset. Use to define scenarios 
+// where the program should crash. Unexpected behavior 
+// should crash the server. This may be extended to also log.
+#define enforce(expression,description)  \
+    ({if(expression);else{fprintf(stderr,"%s:%u: fatal error '%s' exiting...\n", __FILE__, __LINE__, (description)); exit(1);}})
+
 
 #endif // Guard
