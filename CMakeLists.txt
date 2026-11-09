@@ -13,17 +13,17 @@ add_executable(tester)
 
 target_sources(tester
     PRIVATE
-        #src/io_helper.c
-        #src/http_helper.c
+        src/astral_error.c
+        src/socket_helper.c
         src/tester.c
     PRIVATE
         FILE_SET HEADERS
         BASE_DIRS include
         FILES
             include/astral_error.h
-            #include/job_queue.h
-            #include/io_helper.h
-            #include/http_helper.h
+            include/http_helper.h
+            include/socket_helper.h
+            
 )
 
 
