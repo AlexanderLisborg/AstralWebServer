@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <fcntl.h>
+#include <unistd.h>
+
 
 // Michael Scott concurrent queue with separate 
 // mutexes for head and tail. Modified as a job queue.

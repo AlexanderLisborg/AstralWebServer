@@ -1,5 +1,6 @@
 
 #include "socket_helper.h"
+#include "http_helper.h"
 #include "astral_error.h"
 
 #include <unistd.h>
@@ -26,5 +27,8 @@ int main(){
     printf("Read %d bytes! \n",suc);
     readBuffer[MAX_HTTP_REQUEST_SIZE-1] = '\0';
     printf("Read : %s \n",readBuffer);
+    suc = chdir("../html");
+    enforce(suc==0,"Failed change dir.");
+    handle_http_request(connectionSocketFd,readBuffer);
     return 0;
 }

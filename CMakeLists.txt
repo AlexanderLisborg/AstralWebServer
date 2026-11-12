@@ -9,13 +9,14 @@ project(
 #set_property(TARGET PROPERTY C_STANDARD)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(tester)
+add_executable(server)
 
-target_sources(tester
+target_sources(server
     PRIVATE
         src/astral_error.c
         src/socket_helper.c
-        src/tester.c
+        src/http_helper.c
+        src/server.c
     PRIVATE
         FILE_SET HEADERS
         BASE_DIRS include

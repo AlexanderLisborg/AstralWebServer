@@ -30,6 +30,9 @@ typedef enum _astral_error {
     NUMBER_OF_ASTRAL_ERRORS
 } astral_error_t;
 
+// C-string representations of macro names.
+extern const char* astralErrorStr[NUMBER_OF_ASTRAL_ERRORS];
+
 // Basically assert. Unlike assert, this macro does not
 // get excluded when DEBUG is unset. Use to define scenarios 
 // where the program should crash. Unexpected behavior 
