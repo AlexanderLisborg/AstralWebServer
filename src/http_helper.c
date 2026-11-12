@@ -2,6 +2,7 @@
 #include "astral_error.h"
 #include "http_helper.h"
 
+#include <errno.h>
 #include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -10,50 +11,77 @@
 
 // HTTP/1.0 syntax sourced from https://www.w3.org/Protocols/HTTP/1.0/spec.html#Request
 
-// Arbitrary, may be subject to change
+// Arbitrary macro values, may be subject to change
 #define ASTRAL_MAX_URI_LENGTH 1024
 #define ASTRAL_MAX_REQUEST_LENGTH 2048
 #define ASTRAL_MAX_RESOURCE_SIZE 1073741824 // 1 GB
 #define ASTRAL_READ_CHUNK_SIZE 2097152 // 2 MB
 
-void serve_error(int socketFd, astral_error_t error);
-int serve_file(int const socketFd, int const fileFd, unsigned int const bufferSize,unsigned int const fileSize);
+int _serve_resource(int socketFd, char_span_t uri);
+void _serve_error(int socketFd, astral_error_t error);
+int _serve_fd(int const socketFd, int const fileFd, unsigned int const bufferSize,unsigned int const fileSize);
+void _parse_header(http_header_args_t *header,char* request);
 
-void parse_http_request(int fd,char* request){
-	/* HTTP request BNF syntax 
-	Request = Simple-Request | Full-Request
-	Simple-Request = "GET" SP Request-URI CRLF
-	Full-Request = Request-Line *( General-Header  | Request-Header | Entity-Header ) CRLF [ Entity-Body ]
-	Request-Line = Method SP Request-URI SP HTTP-Version CRLF
-	General-Header = 
+void handle_http_request(int fd, char* request){
+	http_header_args_t header = {0};
+	_parse_header(&header,request);
+	// if GET method with nonempty args, handle.
+	if(header.method==GET && 
+		header.resourceURI.head!=0 &&
+		header.resourceURI.length!=0 &&
+		header.versionMajor!=0 &&
+		header.versionMinor!=0
+	){
+		_serve_resource(fd,header.resourceURI);
+	}
 
-	// Server should send status code 501 if extension-method is not available
-	Method = "GET" | "HEAD" | "POST" | extension-method 
-	extension-method = token 
-	*/
 }
 
-void handle_http_GET(int fd,char* uri){
+void _parse_header(http_header_args_t *header,char* request){
+	int i = 0;
+	if(strncmp(request,"GET ",4)==0){
+		header->method = GET;
+		i+=4;
+	}
+	int uriStart = i;
+	for(; i < ASTRAL_MAX_URI_LENGTH + uriStart ; i++){
+		if(request[i]==' '){
+			break;
+		}
+	}
+	if(i<=ASTRAL_MAX_URI_LENGTH+uriStart){
+		char_span_t sp = {(request + uriStart), i - uriStart};
+		header->resourceURI = sp;
+	}
+	i++;
 
+	if(strncmp((request+i),"HTTP/1.1",8)==0){
+		header->versionMajor=1;
+		header->versionMinor=1;
+		i+=8;
+	}
+	
 }
 
-int serve_resource(int socketFd, char* path){
-	// Check path length
-	if(strnlen(path,ASTRAL_MAX_URI_LENGTH)==ASTRAL_MAX_URI_LENGTH){
-		serve_error(socketFd,E_URI_TOO_LONG);
+int _serve_resource(int socketFd, char_span_t uri){
+	// Check uri length
+	if(uri.length>ASTRAL_MAX_URI_LENGTH){
+		_serve_error(socketFd,E_URI_TOO_LONG);
 		return E_URI_TOO_LONG;
 	}
-	// Check illegal escape sequence ".."
-	if(strstr(path,"..")==NULL){
-		serve_error(socketFd,E_URI_ESCAPE_SEQUENCE_FOUND);
+	// Path is always relative.
+	char *path = uri.head-1;
+	// Modify uri in place such that it becomes 
+	// the relative path C string... This corrupts the uri.
+	*(path) = '.';
+	*(uri.head + uri.length) = '\0';
+
+	// Check illegal escape sequence ".." in path.
+	if((memmem(path, uri.length=1, "..", 2)!=0 )){
+		_serve_error(socketFd,E_URI_ESCAPE_SEQUENCE_FOUND);
 		return E_URI_ESCAPE_SEQUENCE_FOUND;
 	}
-	// Check if path is static (/example/static/uri)
-	if(*path!='.'){ 
-		serve_error(socketFd,E_URI_IS_STATIC);
-		return E_URI_IS_STATIC;
-	}
-	// Check if file is non-regular (socket,symbolic link, block device, directory, character device, FIFO)
+
 	struct stat statBuffer;
 
 	// TODO: fix rare race condition:
@@ -62,46 +90,53 @@ int serve_resource(int socketFd, char* path){
 	// check an outdated value, leading to incorrect behaviour.
 
 	// Aquire stat lock ?
-	lstat(path,&statBuffer);
 	
+	// Init file stat for further checks
+	if(lstat(path,&statBuffer)==-1){
+		switch(errno){ //TODO: Implement all possible lstat errors
+			case ENOENT:
+				_serve_error(socketFd,E_FILE_DNE);
+				return E_FILE_DNE;
+		}
+	}
+
+	// Check if file is non-regular (socket,symbolic link, block device, directory, character device, FIFO)
 	if(!S_ISREG(statBuffer.st_mode)){
-		serve_error(socketFd,E_FILE_IS_NON_REGULAR);
+		_serve_error(socketFd,E_FILE_IS_NON_REGULAR);
 		return E_FILE_IS_NON_REGULAR;
 	}
 
 	// Check if file is empty
 	if(statBuffer.st_size==0){
-		serve_error(socketFd,E_FILE_IS_EMPTY);
+		_serve_error(socketFd,E_FILE_IS_EMPTY);
 		return E_FILE_IS_EMPTY;
 	}
 
 	// Check if file is too large
 	if(statBuffer.st_size>ASTRAL_MAX_RESOURCE_SIZE){
-		serve_error(socketFd,E_FILE_TOO_LARGE);
+		_serve_error(socketFd,E_FILE_TOO_LARGE);
 		return E_FILE_TOO_LARGE;
 	}
 
 	// Check read access
 	if(access(path,R_OK)!=F_OK){
-		serve_error(socketFd,E_FILE_READ_ACCESS_DENIED);
+		_serve_error(socketFd,E_FILE_READ_ACCESS_DENIED);
 		return E_FILE_READ_ACCESS_DENIED;
 	}
 	
 	//Read content, pass into fd.
 	int fileFd = open(path,O_RDONLY);
 	enforce(fileFd>=0,"Failed opening requested file.");
-	int res = serve_file(socketFd,fileFd,ASTRAL_READ_CHUNK_SIZE,statBuffer.st_size);
+	int res = _serve_fd(socketFd,fileFd,ASTRAL_READ_CHUNK_SIZE,statBuffer.st_size);
 	if(res != 0){
-		serve_error(socketFd,res);
+		_serve_error(socketFd,res);
 		return res;
 	}
-
-	//Release stat lock?
-
 	return 0; //Success
 }
 
-void serve_error(int socketFd, astral_error_t error){
+void _serve_error(int socketFd, astral_error_t error){
+	fprintf(stderr,"Served standard error page. %s\n",astralErrorStr[error]);
 	//TODO : Evaluate strings at compile time rather than run time.
 	char errorPageFallback[512];
 	sprintf(errorPageFallback, ""
@@ -120,14 +155,14 @@ void serve_error(int socketFd, astral_error_t error){
 	int sc1 = send(socketFd,headerBuf,strnlen(headerBuf,512),MSG_MORE);
 	int sc2 = send(socketFd,errorPageFallback,strnlen(errorPageFallback,512),0);
 	// TODO: Handle error instead of crashing
-	enforce(sc1==strnlen(errorPageFallback,512), "Failed writing to socket.");
+	enforce(sc1==strnlen(headerBuf,512), "Failed writing to socket.");
 	enforce(sc2==strnlen(errorPageFallback,512), "Failed writing to socket.");
 	enforce(close(socketFd)==0,"Failed to close socket.");
 }
 // Reads file in chunks of bufferSize at a time and sends
 // all data to socketFd. Closes socketFd and returns 0
 // on success. Returns astral error code on error.
-int serve_file(int const socketFd, int const fileFd, unsigned int const bufferSize,unsigned int const fileSize){
+int _serve_fd(int const socketFd, int const fileFd, unsigned int const bufferSize,unsigned int const fileSize){
 	char headerBuf[512];
 	//TODO: Evaluate string at compile time rather tan run time.
 	sprintf(headerBuf, ""
