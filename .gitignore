@@ -2,4 +2,7 @@
 /Build
 /vscode
 
+tester.c
+
 .compile_commands.json
+compile_commands.json
