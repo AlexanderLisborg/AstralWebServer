@@ -89,7 +89,9 @@ int main(int argc, char *argv[]) {
 }
 // Job function for worker threads to execute
 void job_fun(int fd, char* readBuffer){
-	handle_http_request(fd,readBuffer);
+	pathmapping_t mapping[] = {{"/","./default.html"}}; 
+	pathmap_t pathmap = {mapping,1};
+	handle_http_request(fd,readBuffer,&pathmap);
 	enforce(
 		close(fd),
 		"Failed closing socket."

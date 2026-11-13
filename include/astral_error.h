@@ -22,6 +22,11 @@
     GEN(E_FILE_IS_EMPTY) \
     GEN(E_FILE_TOO_LARGE) \
     GEN(E_FILE_READ_FAILED) \
+    GEN(E_PATHMAP_ENTRY_IS_INVALID) \
+    GEN(E_PATHMAP_ENTRY_KEY_TOO_LONG) \
+    GEN(E_PATHMAP_ENTRY_VALUE_TOO_LONG) \
+    GEN(E_PATHMAP_ENTRY_KEY_IS_EMPTY) \
+    GEN(E_PATHMAP_ENTRY_VALUE_IS_EMPTY) \
 
 // All errors should be handled without crashing. (non-fatal)
 // For fatal errors, use enforce.

@@ -3,6 +3,22 @@
 
 #include "span.h"
 
+// Arbitrary macro values, may be subject to change
+#define ASTRAL_MAX_URI_LENGTH 1024
+#define ASTRAL_MAX_REQUEST_LENGTH 2048
+#define ASTRAL_MAX_RESOURCE_SIZE 1073741824 // 1 GB
+#define ASTRAL_READ_CHUNK_SIZE 2097152 // 2 MB
+
+typedef struct pathmapping{
+	char key[ASTRAL_MAX_URI_LENGTH];
+	char value[ASTRAL_MAX_URI_LENGTH];
+}pathmapping_t;
+
+typedef struct pathmap{
+	pathmapping_t* map;
+	unsigned int size;
+} pathmap_t;
+
 typedef enum http_method{
     GET,QUERY,HEAD,POST,PUT,DELETE,CONNECT,OPTIONS,TRACE,PATCH
 } http_method_t;
@@ -43,6 +59,6 @@ typedef struct http_header_args{
 } http_header_args_t; 
 
 // Parse http request and handle it appropriately.
-void handle_http_request(int fd, char* request);
+int handle_http_request(int fd, char* request,pathmap_t * pathmap);
 
 #endif // guard
